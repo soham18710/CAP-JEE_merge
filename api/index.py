@@ -24,8 +24,7 @@ progress_state = {
 }
 
 app = FastAPI(title="CAP-JEE Merit Merger")
-# Vercel needs the 'app' variable to be available at the module level
-app = app
+# Vercel entry point
 print("--- Server Starting: Version 2.0 (Enhanced Progress & Robust PDF) ---")
 
 # Enable CORS for frontend interaction
@@ -39,15 +38,9 @@ app.add_middleware(
 # Serve static files (Optional on Vercel as it serves them directly)
 # app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-@app.get("/")
-async def read_index():
-    # Vercel serves /frontend files directly, but we keep this as a fallback
-    # Check both potential locations in the build output
-    paths = ['frontend/index.html', 'index.html']
-    for p in paths:
-        if os.path.exists(p):
-            return FileResponse(p)
-    return {"message": "CAP-JEE Merit Merger API"}
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 # Use /tmp for serverless environments (Vercel)
 UPLOAD_DIR = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
