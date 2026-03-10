@@ -1,14 +1,12 @@
 {
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
+  "functions": {
+    "api/index.py": {
+      "runtime": "@vercel/python"
     }
-  ],
+  },
   "rewrites": [
-    { "source": "/upload", "destination": "app.py" },
-    { "source": "/progress", "destination": "app.py" },
-    { "source": "/download", "destination": "app.py" },
-    { "source": "/(.*)", "destination": "/frontend/$1" }
+    { "source": "/upload", "destination": "/api/index.py" },
+    { "source": "/progress", "destination": "/api/index.py" },
+    { "source": "/download", "destination": "/api/index.py" }
   ]
 }
