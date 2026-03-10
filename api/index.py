@@ -6,10 +6,19 @@ import pandas as pd
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from cap_and_jee import merge_pdfs
+# Handle imports for both local and Vercel
+try:
+    from cap_and_jee import merge_pdfs
+except ImportError:
+    from api.cap_and_jee import merge_pdfs
+
 from vercel_blob import put
 import sys
-sys.path.append(os.path.dirname(__file__))
+
+# Ensure api directory is in path for relative imports
+api_dir = os.path.dirname(os.path.abspath(__file__))
+if api_dir not in sys.path:
+    sys.path.append(api_dir)
 
 from fastapi.staticfiles import StaticFiles
 

@@ -1,10 +1,12 @@
 {
   "functions": {
-    "api/index.py": { "runtime": "@vercel/python" }
+    "api/index.py": {
+      "runtime": "@vercel/python"
+    }
   },
   "rewrites": [
-    { "source": "/upload", "destination": "/api/index.py" },
-    { "source": "/progress", "destination": "/api/index.py" },
-    { "source": "/download", "destination": "/api/index.py" }
+    { "source": "/upload", "destination": "api/index.py" },
+    { "source": "/progress", "destination": "api/index.py" },
+    { "source": "/download", "destination": "api/index.py" }
   ]
 }
