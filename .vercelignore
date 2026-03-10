@@ -1,0 +1,9 @@
+.git
+__pycache__
+uploads
+ALL_CAP_JEE_Merged.csv
+CAP.pdf
+JEE.pdf
+*.pyc
+.env
+node_modules

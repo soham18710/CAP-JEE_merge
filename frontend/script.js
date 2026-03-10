@@ -88,7 +88,7 @@ document.getElementById("process-btn").addEventListener("click", async () => {
     progressFill.style.width = "0%";
     
     // Start listening to progress
-    const eventSource = new EventSource("http://localhost:8000/progress");
+    const eventSource = new EventSource("/progress");
     
     const progressCount = document.getElementById("progress-count");
     const progressSpeed = document.getElementById("progress-speed");
@@ -137,7 +137,7 @@ document.getElementById("process-btn").addEventListener("click", async () => {
     };
 
     try {
-        const response = await fetch("http://localhost:8000/upload", {
+        const response = await fetch("/upload", {
             method: "POST",
             body: formData,
         });
@@ -171,6 +171,12 @@ function displayResults(data) {
     document.getElementById("matched-count").textContent = data.summary.matched_students;
     const rate = ((data.summary.matched_students / data.summary.total_students) * 100).toFixed(1);
     document.getElementById("success-rate").textContent = `${rate}%`;
+
+    // Update download link
+    const downloadLink = document.getElementById("download-link");
+    if (data.summary.download_url) {
+        downloadLink.href = data.summary.download_url;
+    }
 
     // Fill table
     body.innerHTML = "";

@@ -7,6 +7,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from cap_and_jee import merge_pdfs
+from vercel_blob import put
 
 from fastapi.staticfiles import StaticFiles
 
@@ -31,16 +32,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Serve static files (Optional on Vercel as it serves them directly)
+# app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
 async def read_index():
-    return FileResponse('frontend/index.html')
+    # Fallback for root path
+    if os.path.exists('frontend/index.html'):
+        return FileResponse('frontend/index.html')
+    return {"message": "CAP-JEE Merit Merger API"}
 
-UPLOAD_DIR = "uploads"
+# Use /tmp for serverless environments (Vercel)
+UPLOAD_DIR = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+RESULTS_FILE = os.path.join("/tmp" if os.environ.get("VERCEL") else ".", "ALL_CAP_JEE_Merged.csv")
+
 if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/progress")
 async def get_progress(request: Request):
@@ -60,7 +67,6 @@ async def get_progress(request: Request):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-RESULTS_FILE = "ALL_CAP_JEE_Merged.csv"
 
 @app.post("/upload")
 async def upload_files(cap_pdf: UploadFile = File(...), jee_pdf: UploadFile = File(...)):
@@ -115,9 +121,21 @@ async def upload_files(cap_pdf: UploadFile = File(...), jee_pdf: UploadFile = Fi
             raise HTTPException(status_code=400, detail="Merging failed: No records were found after matching CAP and JEE data.")
         
         progress_state["stage"] = "Saving"
-        progress_state["message"] = "Saving results to CSV..."
+        progress_state["message"] = "Saving results..."
         df.to_csv(RESULTS_FILE, index=False)
         
+        # Upload to Vercel Blob if token is present
+        blob_url = None
+        if os.environ.get("BLOB_READ_WRITE_TOKEN"):
+            try:
+                with open(RESULTS_FILE, "rb") as f:
+                    resp = put("CAP_JEE_Merged_Results.csv", f.read(), {"access": "public"})
+                    blob_url = resp.get("url")
+                    # Store URL in environment or a simple local cache (limited effectiveness in serverless)
+                    os.environ["VERCEL_BLOB_URL"] = blob_url
+            except Exception as e:
+                print(f"Blob upload failed: {e}")
+
         progress_state["stage"] = "Completed"
         progress_state["percent"] = 100
         progress_state["message"] = "Process successfully finished."
@@ -126,7 +144,8 @@ async def upload_files(cap_pdf: UploadFile = File(...), jee_pdf: UploadFile = Fi
         preview = df.head(50).fillna("").to_dict(orient="records")
         summary = {
             "total_students": len(df),
-            "matched_students": int(df['JEE_Main_Percentile'].notna().sum())
+            "matched_students": int(df['JEE_Main_Percentile'].notna().sum()),
+            "download_url": blob_url or "/download"
         }
         
         return JSONResponse(content={
@@ -140,6 +159,11 @@ async def upload_files(cap_pdf: UploadFile = File(...), jee_pdf: UploadFile = Fi
 
 @app.get("/download")
 async def download_results():
+    if os.environ.get("VERCEL_BLOB_URL"):
+        # If we have a stored blob URL, redirect to it
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=os.environ.get("VERCEL_BLOB_URL"))
+    
     if not os.path.exists(RESULTS_FILE):
         raise HTTPException(status_code=404, detail="Results file not found. Please upload files first.")
     return FileResponse(path=RESULTS_FILE, filename="CAP_JEE_Merged_Results.csv", media_type='text/csv')
