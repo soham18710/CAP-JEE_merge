@@ -1,4 +1,10 @@
 {
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
   "rewrites": [
     { "source": "/upload", "destination": "app.py" },
     { "source": "/progress", "destination": "app.py" },
